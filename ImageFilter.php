@@ -10,9 +10,9 @@ class ImageFilter
 	const FORMAT_GIF = 'gif';
 	const FORMAT_BMP = 'bmp';
 
-	const RESIZE_DECREASE = 1;
-	const RESIZE_INCREASE = 2;
-	const RESIZE_BOTH = 3;
+	const RESIZE_DECREASE = 'resize_decrease';
+	const RESIZE_INCREASE = 'resize_increase';
+	const RESIZE_BOTH = 'resize_both';
 
 	/**
 	 * @var Imagick
@@ -22,20 +22,24 @@ class ImageFilter
 	/**
 	 * @var string
 	 */
-	private $_extension = null;
+	private $_format = null;
 
-	public function __construct($pathIn)
+	public function __construct($pathIn, $format = null)
 	{
 		$this->_image = new Imagick($pathIn);
-		$extension = pathinfo($pathIn, PATHINFO_EXTENSION);
-		$this->_extension = strtolower($extension);
+		if (is_null($format)) {
+			$extension = pathinfo($pathIn, PATHINFO_EXTENSION);
+			$this->_format = strtolower($extension);
+		} else {
+			$this->_format = $format;
+		}
 	}
 
 	/**
 	 * Checks if current resize behavior requires resizing actions.
-	 * @param integer $newWidth
-	 * @param integer $newHeight
-	 * @param integer $resize
+	 * @param int $newWidth
+	 * @param int $newHeight
+	 * @param int $resize
 	 * @return boolean
 	 */
 	private function _checkResizeBehavior($newWidth, $newHeight, $resize)
@@ -55,18 +59,19 @@ class ImageFilter
 
 	/**
 	 * Resize image.
-	 * @param integer $newWidth
-	 * @param integer $newHeight
-	 * @param integer $resize Defines behavior for resizing.
-	 * @param integer $quality Quality of result image compressing (i.e. JPEG compression quality).
+	 * @param int $newWidth
+	 * @param int $newHeight
+	 * @param string $resize Defines behavior for resizing.
+	 * @param int $quality Quality of result image compressing (i.e. JPEG compression quality).
+	 * @return \ImageFilter
 	 */
-	public function filterResize($newWidth, $newHeight, $resize = ImageFilter::RESIZE_BOTH, $quality = 100)
+	public function filterResize($newWidth, $newHeight, $resize = ImageFilter::RESIZE_BOTH, $quality = 90)
 	{
 		if (!$this->_checkResizeBehavior($newWidth, $newHeight, $resize)) {
 			return $this;
 		}
 		$this->_image->setImageCompressionQuality($quality);
-		if ($this->_extension == 'gif') {
+		if ($this->_format == 'gif') {
 			foreach ($this->_image as $frame) {
 				$frame->thumbnailImage($newWidth, $newHeight, true);
 				$w = $frame->getImageWidth();
@@ -81,18 +86,19 @@ class ImageFilter
 
 	/**
 	 * Resize image with cropping. Result will be image with exact width and height.
-	 * @param integer $newWidth
-	 * @param integer $newHeight
-	 * @param integer $resize Defines behavior for resizing.
-	 * @param integer $quality Quality of result image compressing (i.e. JPEG compression quality).
+	 * @param int $newWidth
+	 * @param int $newHeight
+	 * @param string $resize Defines behavior for resizing.
+	 * @param int $quality Quality of result image compressing (i.e. JPEG compression quality).
+	 * @return \ImageFilter
 	 */
-	public function filterResizeCrop($newWidth, $newHeight, $resize = ImageFilter::RESIZE_BOTH, $quality = 100)
+	public function filterResizeCrop($newWidth, $newHeight, $resize = ImageFilter::RESIZE_BOTH, $quality = 90)
 	{
 		if (!$this->_checkResizeBehavior($newWidth, $newHeight, $resize)) {
 			return $this;
 		}
 		$this->_image->setImageCompressionQuality($quality);
-		if ($this->_extension == 'gif') {
+		if ($this->_format == 'gif') {
 			foreach ($this->_image as $frame) {
 				$this->_image->cropthumbnailimage($newWidth, $newHeight);
 				$w = $frame->getImageWidth();
@@ -107,17 +113,18 @@ class ImageFilter
 
 	/**
 	 * Resize image. Output will be image with equals width and height.
-	 * @param integer $newWidthAndHeight
-	 * @param integer $resize Defines behavior for resizing.
-	 * @param integer $quality Quality of result image compressing (i.e. JPEG compression quality).
+	 * @param int $newWidthAndHeight
+	 * @param string $resize Defines behavior for resizing.
+	 * @param int $quality Quality of result image compressing (i.e. JPEG compression quality).
+	 * @return \ImageFilter
 	 */
-	public function filterResizeQuad($newWidthAndHeight, $resize = ImageFilter::RESIZE_BOTH, $quality = 100)
+	public function filterResizeQuad($newWidthAndHeight, $resize = ImageFilter::RESIZE_BOTH, $quality = 90)
 	{
 		if (!$this->_checkResizeBahavior($newWidthAndHeight, $newWidthAndHeight, $resize)) {
 			return $this;
 		}
 		$this->_image->setImageCompressionQuality($quality);
-		if ($this->_extension == 'gif') {
+		if ($this->_format == 'gif') {
 			foreach ($this->_image as $frame) {
 				$this->_image->cropThumbnailImage($newWidthAndHeight, $newWidthAndHeight);
 				$frame->setImagePage($newWidthAndHeight, $newWidthAndHeight, 0, 0);
@@ -130,6 +137,7 @@ class ImageFilter
 
 	/**
 	 * Desaturates image.
+	 * @return \ImageFilter
 	 */
 	public function filterDesaturate()
 	{
@@ -139,6 +147,8 @@ class ImageFilter
 
 	/**
 	 * The function returns the pixel with the averaged color by pixels in a 2-parameters.
+	 * @param $pixel1
+	 * @param $pixel2
 	 * @return ImagickPixel
 	 */
 	private function _getAvgColor($pixel1, $pixel2)
@@ -160,10 +170,9 @@ class ImageFilter
 
 	/**
 	 * Adds a border to an image.
-	 * @param image Imagick source image
-	 * @param dir string border addiction direction must be 'left', 'right' or 'both'
-	 * @param width integer required image width
-	 * @param height integer required image height
+	 * @param string $dir border addiction direction must be 'left', 'right' or 'both'
+	 * @param int $width required image width
+	 * @param int $height required image height
 	 */
 	private function _addBorder($dir, $width, $height)
 	{
@@ -206,6 +215,7 @@ class ImageFilter
 	/**
 	 * Sets image format.
 	 * @param string $format
+	 * @return \ImageFilter
 	 */
 	public function setImageFormat($format)
 	{
@@ -214,22 +224,51 @@ class ImageFilter
 	}
 
 	/**
-	 * Saves image to file by specified outup path.
+	 * Saves image to file by specified output path.
 	 * @param string $pathOut
+	 * @return bool
 	 */
 	public function writeImage($pathOut)
 	{
-		if ($this->_extension == 'gif') {
+		if ($this->_format == 'gif') {
 			return $this->_image->writeImages($pathOut, true) === true;
 		} else {
 			return $this->_image->writeImage($pathOut) === true;
 		}
 	}
 
+	public function processOrientation()
+	{
+		$orientation = $this->_image->getimageorientation();
+		if ($orientation == Imagick::ORIENTATION_UNDEFINED) {
+			return true;
+		}
+		$flippedOrientations = array(
+			Imagick::ORIENTATION_TOPRIGHT,
+			Imagick::ORIENTATION_BOTTOMLEFT,
+			Imagick::ORIENTATION_LEFTTOP,
+			Imagick::ORIENTATION_RIGHTBOTTOM,
+		);
+		if (in_array($orientation, array(Imagick::ORIENTATION_BOTTOMLEFT, Imagick::ORIENTATION_BOTTOMRIGHT))) {
+			$this->_image->rotateimage(new ImagickPixel(), 180);
+		}
+		if (in_array($orientation, array(Imagick::ORIENTATION_LEFTBOTTOM, Imagick::ORIENTATION_LEFTTOP))) {
+			$this->_image->rotateimage(new ImagickPixel(), -90);
+		}
+		if (in_array($orientation, array(Imagick::ORIENTATION_RIGHTBOTTOM, Imagick::ORIENTATION_RIGHTTOP))) {
+			$this->_image->rotateimage(new ImagickPixel(), 90);
+		}
+		if (in_array($orientation, $flippedOrientations)) {
+			$this->_image->flipimage();
+		}
+		$this->_image->setimageorientation(Imagick::ORIENTATION_UNDEFINED);
+		return true;
+	}
+
 	/**
 	 * Destroys imagick object.
 	 */
-	public function destory()
+	public function destroy()
 	{
 		$this->_image->destroy();
 	}
